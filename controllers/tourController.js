@@ -10,6 +10,7 @@ exports.aliasTopTours = async (req, res, next) => {
 };
 
 exports.getAllTours = async (req, res) => {
+
   try {
 
     // EXECUTING THE QUERY
@@ -130,4 +131,64 @@ exports.tourStats = async (req, res) => {
       message: err
     });
   }
+};
+
+exports.getMontyPlan = async (req, res) => {
+  try {
+
+    const year = req.params.year * 1;
+
+    const data = await Tour.aggregate([
+      {
+        $unwind: "$startDates"
+      },
+      //getting the tour by year
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}-01-01`),
+            $lte: new Date(`${year}-12-31`)
+          }
+        }
+      },
+      //grouping the tour by year and name and total number of tours
+      {
+        $group: {
+          _id: {
+            $month: "$startDates"
+          },
+          totalTours: {
+            $sum: 1
+          },
+          tours: {
+            $push: "$name"
+          }
+        }
+      },
+      {
+        $addFields: {
+          month: "$_id"
+        }
+      },
+      {
+        $project: {
+          _id: 0
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      total: data.length,
+      data: data
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: 'fail',
+      message: err
+    });
+  }
+  res.status(200).json({
+    "message" : "Monty plan"
+  })
 };
