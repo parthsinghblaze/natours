@@ -12,6 +12,10 @@ const handleDuplicateFieldsDB = err => {
   return new AppError(message, 400);
 };
 
+const handleJWTError = err => {
+  return new AppError("Invalid token. Please log in again!", 401);
+}
+
 const handleValidationErrorDB = err => {
   console.log("Validate Error", err);
   const errors = Object.values(err.errors).map(el => el.message);
@@ -60,11 +64,15 @@ module.exports = (err, req, res, next) => {
     sendErrorDev(err, res);
   } else if (process.env.NODE_ENV === 'production') {
     let error = { ...err };
+    console.log("err", error);
     if (error.name === 'CastError') error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
     if (error.name === 'ValidationError')
       error = handleValidationErrorDB(error);
 
+    if (error.name === 'JsonWebTokenError') error = handleJWTError(error)
+
     sendErrorProd(error, res);
+
   }
 };
