@@ -12,6 +12,18 @@ const signToken = id => {
   })
 }
 
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id)
+
+  res.status(statusCode).json({
+    status: 'success',
+    token,
+    data: {
+      user
+    }
+  })
+}
+
 exports.signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name: req.body.name,
@@ -179,3 +191,21 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   })
 
 });
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  // Get user from collection
+  const user = await User.findById(req.user.id).select('+password');
+
+  // Check if posted current password is same
+  if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
+    return next(new AppError('Your current password is wrong', 401));
+  }
+
+  // if so, update password
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  await user.save();
+
+  // log user in, send JWT
+  createSendToken(user, 200, res)
+})
